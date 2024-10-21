@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BotCalc</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "@google/generative-ai": "https://esm.run/@google/generative-ai"
+      }
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown.js/0.5.0/markdown.min.js" integrity="sha512-kaDP6dcDG3+X87m9SnhyJzwBMKrYnd2tLJjGdBrZ9yEL8Zcl2iJRsPwylLkbd2g3QC5S8efV3sgwI5r73U0HnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.5.0/math.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.js" integrity="sha384-EPpM5iI32IZ/VRFcz3xSkdD5i6TdcPvvzI9EqAVOEK41UyyWxEH+Q/FISR2ks/tf" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" integrity="sha384-RibDQpPB/VcnWQppE92nE68uA2H39Np7k2BUszPbKzHoPiIGgFfhKtptKSprbcuU" crossorigin="anonymous">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Times New Roman', serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      height: 100vh;
+      background-color: #121212;
+      color: #ffffff;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px;
+      background-color: #1e1e1e;
+      width: 100%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      color: #007bff;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 600px;
+      height: 60vh;
+      border: 2px solid #444;
+      overflow-y: auto;
+      padding: 20px;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .user-message {
+      align-self: flex-end;
+      background-color: #007bff;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 80%;
+      word-wrap: break-word;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .bot-message {
+      align-self: flex-start;
+      background-color: #2a2a2a;
+      color: #ffffff;
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 80%;
+      word-wrap: break-word;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .input-container {
+      display: flex;
+      width: 100%;
+      max-width: 600px;
+      gap: 10px;
+      padding: 0 10px;
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      padding: 10px;
+      border: 2px solid #444;
+      border-radius: 20px;
+      font-size: 16px;
+      height: 45px;
+      background-color: #333;
+      color: #ffffff;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 16px;
+      height: 45px;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background-color: #1e1e1e;
+      width: 100%;
+      box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    footer p {
+      margin: 0;
+      font-size: 1rem;
+      color: #aaa;
+    }
+
+    @media (max-width: 480px) {
+      .chat-container {
+        height: 55vh;
+        margin-bottom: 10px;
+      }
+
+      .input-container {
+        flex-direction: column;
+        gap: 10px;
+        padding: 0;
+      }
+
+      input[type="text"] {
+        margin-right: 0;
+        width: 100%;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>BotCalc</h1>
+  </header>
+
+  <div class="chat-container" id="chat-container"></div>
+
+  <div class="input-container">
+    <input type="text" id="user-input" placeholder="Digite sua mensagem...">
+    <button id="enviar">Enviar</button>
+  </div>
+
+  <footer>
+    <p>Desenvolvido por Marco Aurélio</p>
+  </footer>
+
+  <script type="module">
+    import { GoogleGenerativeAI } from "@google/generative-ai";
+
+    const API_KEY = "AIzaSyDEbBioExNkKb6_bd6yfdY_CSHnweUNj48";
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    document.querySelector("#enviar").addEventListener("click", () => sendMessage());
+
+    async function sendMessage() {
+      const userInput = document.getElementById('user-input').value;
+
+      // Resposta à pergunta sobre a system_instruction
+      if (userInput.toLowerCase().includes("system_instruction")) {
+        appendMessage('user', userInput);
+        appendMessage('bot', 'Eu sou um matemático especializado em resolver e explicar problemas matemáticos.');
+        document.getElementById('user-input').value = '';
+        return;
+      }
+
+      
+      try {
+        const mathResult = math.evaluate(userInput);
+        appendMessage('user', userInput);
+        appendMessage('bot', `O resultado é: ${mathResult}`);
+      } catch (err) {
+     
+        appendMessage('user', userInput);
+
+        const specializedPrompt = `Você é um matemático. Responda à seguinte pergunta de forma clara e direta, explicando o conceito matemático: ${userInput}`;
+        const result = await model.generateContent(specializedPrompt);
+        const response = await result.response;
+        const botResponse = response.text();
+
+        appendMessage('bot', botResponse);
+      }
+
+      document.getElementById('user-input').value = '';
+    }
+
+    function appendMessage(sender, message) {
+      const chatContainer = document.getElementById('chat-container');
+      const messageElement = document.createElement('div');
+      messageElement.classList.add(`${sender}-message`);
+
+
+      if (message.includes('$$')) {
+        messageElement.innerHTML = katex.renderToString(message, {throwOnError: false});
+      } else {
+        messageElement.innerHTML = markdown.toHTML(message);
+      }
+
+      chatContainer.appendChild(messageElement);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  </script>
+</body>
+
+</html>
